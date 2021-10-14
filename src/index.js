@@ -53,6 +53,17 @@ server.get(`/customers`, (req, res) => {
     });
 });
 
+server.get(`/customers/:id`, (req, res) => {
+    const id = parseInt(req.params.id);
+
+    connection.query(`SELECT * FROM customers WHERE id = $1`, [id]).then(costumers => {
+        if(!costumers.rows.length) {
+            return res.sendStatus(404);
+        }
+        return res.send(costumers.rows[0]);
+    });
+});
+
 server.post(`/customers`, (req, res) => {
     const newCustomer = req.body;
 
