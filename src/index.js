@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import pg from 'pg';
-import dayjs from 'dayjs';
-import Joi from 'joi';
+import { validateCategory, validateGame, validateCustomer } from './validations.js';
 
 const server = express();
 server.use(cors());
@@ -17,32 +16,6 @@ const connection = new Pool({
     port: 5432,
     database: 'boardcamp',
 });
-
-const validateCategory = data => {
-    const schema = Joi.object({
-        name: Joi.string().min(1).required()
-    }).unknown();
-    return schema.validate(data).error;
-}
-
-const validateGame = data => {
-    const schema = Joi.object({
-        name: Joi.string().min(1).required(),
-        stockTotal: Joi.number().min(1).required(),
-        pricePerDay: Joi.number().min(1).required(),
-    }).unknown();
-    return schema.validate(data).error;
-}
-
-const validateCustomer = data => {
-    const schema = Joi.object({
-        name: Joi.string().min(1).required(),
-        phone: Joi.string().min(10).max(11).required(),
-        cpf: Joi.string().min(11).max(11).required(),
-        birthday: Joi.date().iso().max(dayjs().format(`YYYY-MM-DD`)).required()
-    }).unknown();
-    return schema.validate(data).error;
-}
 
 server.get(`/customers`, (req, res) => {
     connection.query(`SELECT * FROM customers;`).then(customers => {
