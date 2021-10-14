@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import pg from 'pg';
+import dayjs from 'dayjs';
 import Joi from 'joi';
 
 const server = express();
@@ -33,31 +34,69 @@ const validateGame = data => {
     return schema.validate(data).error;
 }
 
-server.get("/categories", (req, res) => {
+const validateCustomer = data => {
+    const schema = Joi.object({
+        name: Joi.string().min(1).required(),
+        phone: Joi.string().min(10).max(11).required(),
+        cpf: Joi.string().min(11).max(11).required(),
+        birthday: Joi.date().iso().max(dayjs().format(`YYYY-MM-DD`)).required()
+    }).unknown();
+    return schema.validate(data).error;
+}
+
+server.get(`/customers`, (req, res) => {
+    connection.query(`SELECT * FROM customers;`).then(customers => {
+        if(req.query.cpf) {
+            return res.send(customers.rows.filter(row => row.cpf.startsWith(req.query.cpf)));
+        }
+        return res.send(customers.rows);
+    });
+});
+
+server.post(`/customers`, (req, res) => {
+    const newCustomer = req.body;
+
+    if(validateCustomer(newCustomer)) {
+        return res.sendStatus(400);
+    }
+    connection.query('SELECT * FROM customers;').then(customers => {
+        const alreadyExists = customers.rows.find(c => c.cpf === newCustomer.cpf);
+        if(alreadyExists) {
+            return res.sendStatus(409);
+        }
+        connection.query(`INSERT INTO customers (name,phone,cpf,birthday) VALUES ($1,$2,$3,$4);`,
+        [newCustomer.name, newCustomer.phone, newCustomer.cpf, newCustomer.birthday])
+        .then(result => {
+            return res.sendStatus(201);
+        });
+    });
+});
+
+server.get(`/categories`, (req, res) => {
     connection.query(`SELECT * FROM categories;`).then(categories => {
         res.send(categories.rows);
     });
 });
 
-server.post("/categories", (req, res) => {
+server.post(`/categories`, (req, res) => {
     const newCategory = req.body;
 
     if(validateCategory(newCategory)) {
         return res.sendStatus(400);
     }
-    connection.query('SELECT * FROM categories').then(categories => {
+    connection.query(`SELECT * FROM categories;`).then(categories => {
         const alreadyExists = categories.rows.find(c => c.name === newCategory.name);
         if(alreadyExists) {
             return res.sendStatus(409);
         }
-        connection.query('INSERT INTO categories (name) VALUES ($1);', [newCategory.name]).then(result => {
+        connection.query(`INSERT INTO categories (name) VALUES ($1);`, [newCategory.name]).then(result => {
             return res.sendStatus(201);
         });
     });
 });
 
 server.get("/games", (req, res) => {
-    connection.query('SELECT * FROM games;').then(games => {
+    connection.query(`SELECT * FROM games;`).then(games => {
         if(req.query.name) {
             return res.send(games.rows.filter(row => row.name.startsWith(req.query.name)));
         }
@@ -71,7 +110,7 @@ server.post("/games", (req, res) => {
     if(validateGame(newGame)) {
         return res.sendStatus(400);
     }
-    connection.query('SELECT * FROM categories').then(categories => {
+    connection.query(`SELECT * FROM categories;`).then(categories => {
         const gameCategory = categories.rows.find(c => c.id === newGame.categoryId);
         if(!gameCategory) {
             return res.sendStatus(400);
