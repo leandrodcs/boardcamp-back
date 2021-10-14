@@ -56,11 +56,31 @@ server.get(`/customers`, (req, res) => {
 server.get(`/customers/:id`, (req, res) => {
     const id = parseInt(req.params.id);
 
-    connection.query(`SELECT * FROM customers WHERE id = $1`, [id]).then(costumers => {
+    connection.query(`SELECT * FROM customers WHERE id = $1;`, [id]).then(costumers => {
         if(!costumers.rows.length) {
             return res.sendStatus(404);
         }
         return res.send(costumers.rows[0]);
+    });
+});
+
+server.put(`/customers/:id`, (req, res) => {
+    const id = parseInt(req.params.id);
+    const updatedCustomer = req.body;
+
+    if(validateCustomer(updatedCustomer)) {
+        return res.sendStatus(400);
+    }
+    connection.query('SELECT * FROM customers;').then(customers => {
+        const alreadyExists = customers.rows.find(c => c.cpf === updatedCustomer.cpf);
+        if(!alreadyExists) {
+            return res.sendStatus(404);
+        }
+        connection.query(`UPDATE customers SET name = $1, phone = $2, cpf = $3, birthday = $4 WHERE id = $5;`,
+        [updatedCustomer.name, updatedCustomer.phone, updatedCustomer.cpf, updatedCustomer.birthday, id])
+        .then(result => {
+            return res.sendStatus(200);
+        });
     });
 });
 
