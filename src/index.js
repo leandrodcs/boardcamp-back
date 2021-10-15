@@ -131,7 +131,7 @@ server.post(`/categories`, async (req, res) => {
 
 server.get("/games", async (req, res) => {
     try {
-        const games = await  connection.query(`SELECT * FROM games;`);
+        const games = await  connection.query(`SELECT games.*, categories.name as "categoryName" FROM games JOIN categories ON games."categoryId" = categories.id;`);
 
         if(req.query.name) {
             return res.send(games.rows.filter(row => row.name.startsWith(req.query.name)));
