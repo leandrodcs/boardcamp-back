@@ -17,120 +17,161 @@ const connection = new Pool({
     database: 'boardcamp',
 });
 
-server.get(`/customers`, (req, res) => {
-    connection.query(`SELECT * FROM customers;`).then(customers => {
+server.get(`/customers`, async (req, res) => {
+    try {
+        const customers = await  connection.query(`SELECT * FROM customers;`);
+
         if(req.query.cpf) {
-            return res.send(customers.rows.filter(row => row.cpf.startsWith(req.query.cpf)));
+            res.send(customers.rows.filter(row => row.cpf.startsWith(req.query.cpf)));
+            return;
         }
-        return res.send(customers.rows);
-    });
+
+        res.send(customers.rows);
+    } catch {
+        res.sendStatus(500);
+    }
 });
 
-server.get(`/customers/:id`, (req, res) => {
+server.get(`/customers/:id`, async (req, res) => {
     const id = parseInt(req.params.id);
 
-    connection.query(`SELECT * FROM customers WHERE id = $1;`, [id]).then(costumers => {
-        if(!costumers.rows.length) {
+    try {
+        const customers = await connection.query(`SELECT * FROM customers WHERE id = $1;`, [id]);
+
+        if(!customers.rows.length) {
             return res.sendStatus(404);
         }
-        return res.send(costumers.rows[0]);
-    });
+
+        res.send(customers.rows[0]);
+    } catch {
+        res.sendStatus(500);
+    }
 });
 
-server.put(`/customers/:id`, (req, res) => {
-    const id = parseInt(req.params.id);
+server.put(`/customers/:id`, async (req, res) => {
     const updatedCustomer = req.body;
 
-    if(validateCustomer(updatedCustomer)) {
-        return res.sendStatus(400);
-    }
-    connection.query('SELECT * FROM customers;').then(customers => {
-        const alreadyExists = customers.rows.find(c => c.cpf === updatedCustomer.cpf);
+    try {
+        if(validateCustomer(updatedCustomer)) {
+            return res.sendStatus(400);
+        }
+        
+        const id = parseInt(req.params.id);
+        const {name,phone,cpf,birthday} = updatedCustomer;
+        const customers = await connection.query('SELECT * FROM customers;');
+        const alreadyExists = customers.rows.find(c => c.cpf === cpf);
+
         if(!alreadyExists) {
             return res.sendStatus(404);
         }
-        connection.query(`UPDATE customers SET name = $1, phone = $2, cpf = $3, birthday = $4 WHERE id = $5;`,
-        [updatedCustomer.name, updatedCustomer.phone, updatedCustomer.cpf, updatedCustomer.birthday, id])
-        .then(result => {
-            return res.sendStatus(200);
-        });
-    });
+
+        await connection.query(`UPDATE customers SET name = $2, phone = $3, cpf = $4, birthday = $5 WHERE id = $1;`,[id, name, phone, cpf, birthday]);
+        res.sendStatus(200);
+    } catch {
+        res.sendStatus(500);
+    }
 });
 
-server.post(`/customers`, (req, res) => {
+server.post(`/customers`, async (req, res) => {
     const newCustomer = req.body;
 
-    if(validateCustomer(newCustomer)) {
-        return res.sendStatus(400);
-    }
-    connection.query('SELECT * FROM customers;').then(customers => {
-        const alreadyExists = customers.rows.find(c => c.cpf === newCustomer.cpf);
+    try {
+        if(validateCustomer(newCustomer)) {
+            return res.sendStatus(400);
+        }
+
+        const {name,phone,cpf,birthday} = newCustomer;
+        const customers = await connection.query('SELECT * FROM customers;');
+        const alreadyExists = customers.rows.find(c => c.cpf === cpf);
+
         if(alreadyExists) {
             return res.sendStatus(409);
         }
-        connection.query(`INSERT INTO customers (name,phone,cpf,birthday) VALUES ($1,$2,$3,$4);`,
-        [newCustomer.name, newCustomer.phone, newCustomer.cpf, newCustomer.birthday])
-        .then(result => {
-            return res.sendStatus(201);
-        });
-    });
+
+        await connection.query(`INSERT INTO customers (name,phone,cpf,birthday) VALUES ($1,$2,$3,$4);`,[name, phone, cpf, birthday]);
+        res.sendStatus(201);
+    } catch {
+        res.sendStatus(500);
+    }
 });
 
-server.get(`/categories`, (req, res) => {
-    connection.query(`SELECT * FROM categories;`).then(categories => {
+server.get(`/categories`, async (req, res) => {
+    try {
+        const categories = await connection.query(`SELECT * FROM categories;`);
         res.send(categories.rows);
-    });
+    } catch {
+        res.sendStatus(500);
+    }
+    
 });
 
-server.post(`/categories`, (req, res) => {
+server.post(`/categories`, async (req, res) => {
     const newCategory = req.body;
 
-    if(validateCategory(newCategory)) {
-        return res.sendStatus(400);
-    }
-    connection.query(`SELECT * FROM categories;`).then(categories => {
+    try {
+        if(validateCategory(newCategory)) {
+            return res.sendStatus(400);
+        }
+
+        const categories = await connection.query(`SELECT * FROM categories;`);
         const alreadyExists = categories.rows.find(c => c.name === newCategory.name);
+
         if(alreadyExists) {
             return res.sendStatus(409);
         }
-        connection.query(`INSERT INTO categories (name) VALUES ($1);`, [newCategory.name]).then(result => {
-            return res.sendStatus(201);
-        });
-    });
+
+        await connection.query(`INSERT INTO categories (name) VALUES ($1);`, [newCategory.name])
+        res.sendStatus(201);
+    } catch {
+        res.sendStatus(500);
+    }
+
+
 });
 
-server.get("/games", (req, res) => {
-    connection.query(`SELECT * FROM games;`).then(games => {
+server.get("/games", async (req, res) => {
+    try {
+        const games = await  connection.query(`SELECT * FROM games;`);
+
         if(req.query.name) {
             return res.send(games.rows.filter(row => row.name.startsWith(req.query.name)));
         }
-        return res.send(games.rows);
-    });
+
+        res.send(games.rows);
+    } catch {
+        res.sendStatus(500);
+    }
 });
 
-server.post("/games", (req, res) => {
+server.post("/games", async (req, res) => {
     const newGame = req.body;
 
-    if(validateGame(newGame)) {
-        return res.sendStatus(400);
-    }
-    connection.query(`SELECT * FROM categories;`).then(categories => {
-        const gameCategory = categories.rows.find(c => c.id === newGame.categoryId);
-        if(!gameCategory) {
+    try {
+        if(validateGame(newGame)) {
             return res.sendStatus(400);
         }
-        connection.query('SELECT * FROM games').then(games => {
-            const alreadyExists = games.rows.find(g => g.name === newGame.name);
-            if(alreadyExists) {
-                return res.sendStatus(409);
-            }
-            connection.query(`INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
-            [newGame.name, newGame.image, newGame.stockTotal, newGame.categoryId, newGame.pricePerDay])
-            .then(result => {
-                return res.sendStatus(201);
-            });
-        });
-    });
+
+        const {name, image, stockTotal, categoryId, pricePerDay} = newGame;
+        const categories = await connection.query(`SELECT * FROM categories;`);
+        const gameCategoryExists = categories.rows.find(c => c.id === categoryId);
+
+        if(!gameCategoryExists) {
+            return res.sendStatus(400);
+        }
+
+        const games = await connection.query('SELECT * FROM games');
+        const alreadyExists = games.rows.find(g => g.name === name);
+
+        if(alreadyExists) {
+            return res.sendStatus(409);
+        }
+
+        await connection.query(`INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
+        [name, image, stockTotal, categoryId, pricePerDay]);
+        res.sendStatus(201);
+    } catch {
+        res.sendStatus(500);
+    }
 });
 
 server.listen(4000);
