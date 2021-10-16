@@ -19,8 +19,16 @@ const connection = new Pool({
 
 server.get(`/rentals`, async (req, res) => {
     try{
-        // const rentals = await connection.query(`SELECT * FROM games JOIN rentals ON games.id = rentals."gameId" JOIN customers ON rentals."customerId" = customers.id;`);
-        const rentals = await connection.query(`SELECT * FROM rentals;`)
+        const rentals = await connection.query(`
+        SELECT 
+            rentals.*,
+            jsonb_build_object('name', customers.name, 'id', customers.id) AS customer,
+            jsonb_build_object('id', games.id, 'name', games.name, 'categoryId', games."categoryId", 'categoryName', categories.name) AS game
+        FROM games 
+        JOIN rentals ON games.id = rentals."gameId" 
+        JOIN customers ON rentals."customerId" = customers.id
+        JOIN categories ON games."categoryId" = categories.id
+        ;`);
         res.send(rentals.rows);
     } catch {
         res.sendStatus(500);
