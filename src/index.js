@@ -31,10 +31,10 @@ server.get(`/rentals`, async (req, res) => {
         JOIN categories ON games."categoryId" = categories.id
         ;`);
         if(customerId && gameId) {
-            res.send(rentals.rows.filter(r => r.customerId === parseInt(customerId) && r.gameId === parseInt(gameId)));
+            return res.send(rentals.rows.filter(r => r.customerId === parseInt(customerId) && r.gameId === parseInt(gameId)));
         }
         if(customerId || gameId) {
-            res.send(rentals.rows.filter(r => customerId ? r.customerId === parseInt(customerId) : r.gameId === parseInt(gameId)));
+            return res.send(rentals.rows.filter(r => customerId ? r.customerId === parseInt(customerId) : r.gameId === parseInt(gameId)));
         }
         res.send(rentals.rows);
     } catch {
@@ -60,6 +60,27 @@ server.post(`/rentals`, async (req, res) => {
         await connection.query(`INSERT INTO rentals ("customerId","gameId","rentDate","daysRented","returnDate","originalPrice","delayFee") VALUES ($1,$2,$3,$4,$5,$6,$7);`,
         [customerId, gameId, new Date().toLocaleDateString("pt-Br"), daysRented,null,daysRented*gameBeingRented.pricePerDay,null]);
         res.sendStatus(201);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+server.post(`/rentals/:id/return`, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const rentals = await connection.query(`SELECT rentals.*, games."pricePerDay" FROM rentals JOIN games ON rentals."gameId" = games.id WHERE rentals.id = $1;`, [id]);
+        if(!rentals.rows.length) {
+            return res.sendStatus(404);
+        }
+        const oneDay = 1000 * 60 * 60 * 24;
+        const delayFee = Math.floor((Date.now() - rentals.rows[0].rentDate.getTime()) / oneDay) * rentals.rows[0].pricePerDay||null;
+        await connection.query(`UPDATE rentals SET "returnDate" = $2, "delayFee" = $3 WHERE id = $1`,
+        [
+            id,  
+            new Date().toLocaleDateString("pt-Br"), 
+            delayFee||null
+        ]);
+        res.sendStatus(200);
     } catch {
         res.sendStatus(500);
     }
