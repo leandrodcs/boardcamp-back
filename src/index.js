@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import pg from 'pg';
 import { validateCategory, validateRental, validateGame, validateCustomer } from './validations.js';
+import { parse } from 'pg-protocol';
 
 const server = express();
 server.use(cors());
@@ -77,12 +78,29 @@ server.post(`/rentals/:id/return`, async (req, res) => {
         }
         const oneDay = 1000 * 60 * 60 * 24;
         const delayFee = Math.floor((Date.now() - rentals.rows[0].rentDate.getTime()) / oneDay) * rentals.rows[0].pricePerDay||null;
-        await connection.query(`UPDATE rentals SET "returnDate" = $2, "delayFee" = $3 WHERE id = $1`,
+        await connection.query(`UPDATE rentals SET "returnDate" = $2, "delayFee" = $3 WHERE id = $1;`,
         [
             id,  
             new Date().toLocaleDateString("pt-Br"), 
             delayFee||null
         ]);
+        res.sendStatus(200);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+server.delete(`/rentals/:id`, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const rentals = await connection.query(`SELECT * FROM rentals WHERE id = $1;`, [id]);
+        if(!rentals.rows.length) {
+            return res.sendStatus(404);
+        }
+        if(rentals.rows[0].returnDate === null) {
+            return res.sendStatus(400);
+        }
+        await connection.query(`DELETE FROM rentals WHERE id = $1`, [id]);
         res.sendStatus(200);
     } catch {
         res.sendStatus(500);
