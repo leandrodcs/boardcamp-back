@@ -8,6 +8,16 @@ const validateCategory = data => {
     return schema.validate(data).error;
 }
 
+const validateRental = data => {
+    const schema = Joi.object({
+        customerId: Joi.number().required(),
+        gameId: Joi.number().required(),
+        daysRented: Joi.number().min(1).required(),
+
+    }).unknown();
+    return schema.validate(data).error;
+}
+
 const validateGame = data => {
     const schema = Joi.object({
         name: Joi.string().min(1).required(),
@@ -28,8 +38,11 @@ const validateCustomer = data => {
     return schema.validate(data).error;
 }
 
+
+
 export {
     validateCategory,
+    validateRental,
     validateGame,
     validateCustomer,
 }
