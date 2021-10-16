@@ -19,6 +19,7 @@ const connection = new Pool({
 
 server.get(`/rentals`, async (req, res) => {
     try{
+        const {customerId, gameId} = req.query;
         const rentals = await connection.query(`
         SELECT 
             rentals.*,
@@ -29,6 +30,12 @@ server.get(`/rentals`, async (req, res) => {
         JOIN customers ON rentals."customerId" = customers.id
         JOIN categories ON games."categoryId" = categories.id
         ;`);
+        if(customerId && gameId) {
+            res.send(rentals.rows.filter(r => r.customerId === parseInt(customerId) && r.gameId === parseInt(gameId)));
+        }
+        if(customerId || gameId) {
+            res.send(rentals.rows.filter(r => customerId ? r.customerId === parseInt(customerId) : r.gameId === parseInt(gameId)));
+        }
         res.send(rentals.rows);
     } catch {
         res.sendStatus(500);
