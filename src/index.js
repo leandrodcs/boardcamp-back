@@ -1,22 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import pg from 'pg';
+import connection from './database.js';
 import { validateCategory, validateRental, validateGame, validateCustomer } from './validations.js';
-import { parse } from 'pg-protocol';
 
 const server = express();
 server.use(cors());
 server.use(express.json());
-
-const { Pool } = pg;
-
-const connection = new Pool({
-    user: 'bootcamp_role',
-    password: 'senha_super_hiper_ultra_secreta_do_role_do_bootcamp',
-    host: 'localhost',
-    port: 5432,
-    database: 'boardcamp',
-});
 
 server.get(`/rentals`, async (req, res) => {
     try{
