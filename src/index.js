@@ -59,10 +59,12 @@ server.put(`/customers/:id`, async (req, res) => {
         const id = parseInt(req.params.id);
         const {name,phone,cpf,birthday} = updatedCustomer;
         const customers = await connection.query('SELECT * FROM customers;');
-        const alreadyExists = customers.rows.find(c => c.cpf === cpf);
-
-        if(!alreadyExists) {
+        const currentRegister = customers.rows.find(c => c.id === id);
+        if(!currentRegister) {
             return res.sendStatus(404);
+        }
+        if(currentRegister.cpf !== cpf && customers.rows.find(c => c.cpf === cpf)) {
+            return res.sendStatus(409);
         }
 
         await connection.query(`UPDATE customers SET name = $2, phone = $3, cpf = $4, birthday = $5 WHERE id = $1;`,[id, name, phone, cpf, birthday]);
@@ -134,7 +136,7 @@ server.get("/games", async (req, res) => {
         const games = await  connection.query(`SELECT games.*, categories.name as "categoryName" FROM games JOIN categories ON games."categoryId" = categories.id;`);
 
         if(req.query.name) {
-            return res.send(games.rows.filter(row => row.name.startsWith(req.query.name)));
+            return res.send(games.rows.filter(row => row.name.toLowerCase().startsWith(req.query.name.toLowerCase())));
         }
 
         res.send(games.rows);
