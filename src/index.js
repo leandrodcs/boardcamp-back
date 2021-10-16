@@ -72,6 +72,9 @@ server.post(`/rentals/:id/return`, async (req, res) => {
         if(!rentals.rows.length) {
             return res.sendStatus(404);
         }
+        if(rentals.rows[0].returnDate !== null) {
+            return res.sendStatus(400);
+        }
         const oneDay = 1000 * 60 * 60 * 24;
         const delayFee = Math.floor((Date.now() - rentals.rows[0].rentDate.getTime()) / oneDay) * rentals.rows[0].pricePerDay||null;
         await connection.query(`UPDATE rentals SET "returnDate" = $2, "delayFee" = $3 WHERE id = $1`,
