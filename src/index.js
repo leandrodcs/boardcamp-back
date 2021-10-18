@@ -76,7 +76,7 @@ server.get(`/customers/:id`, async (req, res) => {
 
 server.get(`/rentals`, async (req, res) => {
     try{
-        const {customerId, gameId, offset, limit, status,} = req.query;
+        const {customerId, gameId, offset, limit} = req.query;
         const rentals = await connection.query(`
         SELECT 
             rentals.*,
