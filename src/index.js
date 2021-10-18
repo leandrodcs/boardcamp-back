@@ -174,7 +174,6 @@ server.delete(`/rentals/:id`, async (req, res) => {
         if(!rentals.rows.length || rentals.rows[0].returnDate !== null) {
             return res.sendStatus(404);
         }
-        console.log(rentals.rows[0]);
         await connection.query(`DELETE FROM rentals WHERE id = $1`, [id]);
         res.sendStatus(200);
     } catch {
