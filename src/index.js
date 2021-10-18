@@ -9,7 +9,7 @@ server.use(express.json());
 
 server.get(`/categories`, async (req, res) => {
     try {
-        const {offset, limit, order, desc} = req.query;
+        const {offset, limit} = req.query;
         const categories = await connection.query(`
         SELECT * 
         FROM categories 
@@ -17,7 +17,8 @@ server.get(`/categories`, async (req, res) => {
         FETCH FIRST $2 ROWS ONLY
         ;`, [offset||0, limit||1000]);
         res.send(categories.rows);
-    } catch {
+    } catch(err) {
+        console.log(err);
         res.sendStatus(500);
     } 
 });
@@ -112,9 +113,9 @@ server.get(`/rentals/metrics`, async (req, res) => {
         const {revenue, rentals} = metrics.rows[0];
         res.send(
             {
-                revenue,
-                rentals,
-                avegare: revenue / rentals
+                revenue: Number(revenue),
+                rentals: Number(rentals),
+                average: revenue / rentals
             }
         );
     } catch {
@@ -157,7 +158,8 @@ server.post("/games", async (req, res) => {
         if(alreadyExists) {
             return res.sendStatus(409);
         }
-        await connection.query(`INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
+        await connection.query(`
+        INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
         [name, image, stockTotal, categoryId, pricePerDay]);
         res.sendStatus(201);
     } catch {
@@ -267,7 +269,5 @@ server.delete(`/rentals/:id`, async (req, res) => {
         res.sendStatus(500);
     }
 });
-
-
 
 server.listen(4000);
