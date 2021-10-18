@@ -17,7 +17,8 @@ server.get(`/categories`, async (req, res) => {
         FETCH FIRST $2 ROWS ONLY
         ;`, [offset||0, limit||1000]);
         res.send(categories.rows);
-    } catch {
+    } catch(err) {
+        console.log(err);
         res.sendStatus(500);
     } 
 });
@@ -76,7 +77,7 @@ server.get(`/customers/:id`, async (req, res) => {
 
 server.get(`/rentals`, async (req, res) => {
     try{
-        const {customerId, gameId, offset, limit, status,} = req.query;
+        const {customerId, gameId, offset, limit, status, startDate} = req.query;
         const rentals = await connection.query(`
         SELECT 
             rentals.*,
@@ -96,6 +97,27 @@ server.get(`/rentals`, async (req, res) => {
             return res.send(rentals.rows.filter(r => customerId ? r.customerId === parseInt(customerId) : r.gameId === parseInt(gameId)));
         }
         res.send(rentals.rows);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+server.get(`/rentals/metrics`, async (req, res) => {
+    try {
+        const metrics = await connection.query(`
+        SELECT 
+            SUM("originalPrice") AS revenue,
+            COUNT(id) AS rentals
+        FROM rentals
+        ;`);
+        const {revenue, rentals} = metrics.rows[0];
+        res.send(
+            {
+                revenue: Number(revenue),
+                rentals: Number(rentals),
+                average: revenue / rentals
+            }
+        );
     } catch {
         res.sendStatus(500);
     }
@@ -136,7 +158,8 @@ server.post("/games", async (req, res) => {
         if(alreadyExists) {
             return res.sendStatus(409);
         }
-        await connection.query(`INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
+        await connection.query(`
+        INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
         [name, image, stockTotal, categoryId, pricePerDay]);
         res.sendStatus(201);
     } catch {
@@ -246,7 +269,5 @@ server.delete(`/rentals/:id`, async (req, res) => {
         res.sendStatus(500);
     }
 });
-
-
 
 server.listen(4000);
