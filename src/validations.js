@@ -21,7 +21,7 @@ const validateRental = data => {
 const validateGame = data => {
     const schema = Joi.object({
         name: Joi.string().min(1).required(),
-        image: Joi.string().regex(/(https?:\/\/.*\.(?:png|jpg))/i),
+        image: Joi.string().regex(/(https?:\/\/.*\.(?:png|jpg))/i).required(),
         stockTotal: Joi.number().min(1).required(),
         pricePerDay: Joi.number().min(1).required(),
     }).unknown();
