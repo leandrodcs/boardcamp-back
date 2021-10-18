@@ -76,7 +76,7 @@ server.get(`/customers/:id`, async (req, res) => {
 
 server.get(`/rentals`, async (req, res) => {
     try{
-        const {customerId, gameId, offset, limit} = req.query;
+        const {customerId, gameId, offset, limit, status,} = req.query;
         const rentals = await connection.query(`
         SELECT 
             rentals.*,
@@ -96,6 +96,49 @@ server.get(`/rentals`, async (req, res) => {
             return res.send(rentals.rows.filter(r => customerId ? r.customerId === parseInt(customerId) : r.gameId === parseInt(gameId)));
         }
         res.send(rentals.rows);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+server.post(`/categories`, async (req, res) => {
+    const newCategory = req.body;
+    try {
+        if(validateCategory(newCategory)) {
+            return res.sendStatus(400);
+        }
+        const categories = await connection.query(`SELECT * FROM categories;`);
+        const alreadyExists = categories.rows.find(c => c.name === newCategory.name);
+        if(alreadyExists) {
+            return res.sendStatus(409);
+        }
+        await connection.query(`INSERT INTO categories (name) VALUES ($1);`, [newCategory.name])
+        res.sendStatus(201);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+server.post("/games", async (req, res) => {
+    const newGame = req.body;
+    try {
+        if(validateGame(newGame)) {
+            return res.sendStatus(400);
+        }
+        const {name, image, stockTotal, categoryId, pricePerDay} = newGame;
+        const categories = await connection.query(`SELECT * FROM categories;`);
+        const gameCategoryExists = categories.rows.find(c => c.id === categoryId);
+        if(!gameCategoryExists) {
+            return res.sendStatus(400);
+        }
+        const games = await connection.query('SELECT * FROM games');
+        const alreadyExists = games.rows.find(g => g.name === name);
+        if(alreadyExists) {
+            return res.sendStatus(409);
+        }
+        await connection.query(`INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
+        [name, image, stockTotal, categoryId, pricePerDay]);
+        res.sendStatus(201);
     } catch {
         res.sendStatus(500);
     }
@@ -167,20 +210,6 @@ server.post(`/rentals/:id/return`, async (req, res) => {
     }
 });
 
-server.delete(`/rentals/:id`, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id);
-        const rentals = await connection.query(`SELECT * FROM rentals WHERE id = $1;`, [id]);
-        if(!rentals.rows.length || rentals.rows[0].returnDate !== null) {
-            return res.sendStatus(404);
-        }
-        await connection.query(`DELETE FROM rentals WHERE id = $1`, [id]);
-        res.sendStatus(200);
-    } catch {
-        res.sendStatus(500);
-    }
-});
-
 server.put(`/customers/:id`, async (req, res) => {
     const updatedCustomer = req.body;
     try {
@@ -204,47 +233,20 @@ server.put(`/customers/:id`, async (req, res) => {
     }
 });
 
-server.post(`/categories`, async (req, res) => {
-    const newCategory = req.body;
+server.delete(`/rentals/:id`, async (req, res) => {
     try {
-        if(validateCategory(newCategory)) {
-            return res.sendStatus(400);
+        const id = parseInt(req.params.id);
+        const rentals = await connection.query(`SELECT * FROM rentals WHERE id = $1;`, [id]);
+        if(!rentals.rows.length || rentals.rows[0].returnDate !== null) {
+            return res.sendStatus(404);
         }
-        const categories = await connection.query(`SELECT * FROM categories;`);
-        const alreadyExists = categories.rows.find(c => c.name === newCategory.name);
-        if(alreadyExists) {
-            return res.sendStatus(409);
-        }
-        await connection.query(`INSERT INTO categories (name) VALUES ($1);`, [newCategory.name])
-        res.sendStatus(201);
+        await connection.query(`DELETE FROM rentals WHERE id = $1`, [id]);
+        res.sendStatus(200);
     } catch {
         res.sendStatus(500);
     }
 });
 
-server.post("/games", async (req, res) => {
-    const newGame = req.body;
-    try {
-        if(validateGame(newGame)) {
-            return res.sendStatus(400);
-        }
-        const {name, image, stockTotal, categoryId, pricePerDay} = newGame;
-        const categories = await connection.query(`SELECT * FROM categories;`);
-        const gameCategoryExists = categories.rows.find(c => c.id === categoryId);
-        if(!gameCategoryExists) {
-            return res.sendStatus(400);
-        }
-        const games = await connection.query('SELECT * FROM games');
-        const alreadyExists = games.rows.find(g => g.name === name);
-        if(alreadyExists) {
-            return res.sendStatus(409);
-        }
-        await connection.query(`INSERT INTO games (name,image,"stockTotal","categoryId","pricePerDay") VALUES ($1, $2, $3, $4, $5);`, 
-        [name, image, stockTotal, categoryId, pricePerDay]);
-        res.sendStatus(201);
-    } catch {
-        res.sendStatus(500);
-    }
-});
+
 
 server.listen(4000);
