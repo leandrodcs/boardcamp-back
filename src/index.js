@@ -9,7 +9,7 @@ server.use(express.json());
 
 server.get(`/categories`, async (req, res) => {
     try {
-        const {offset, limit} = req.query;
+        const {offset, limit, order, desc} = req.query;
         const categories = await connection.query(`
         SELECT * 
         FROM categories 
@@ -76,7 +76,7 @@ server.get(`/customers/:id`, async (req, res) => {
 
 server.get(`/rentals`, async (req, res) => {
     try{
-        const {customerId, gameId, offset, limit, status,} = req.query;
+        const {customerId, gameId, offset, limit, status, startDate} = req.query;
         const rentals = await connection.query(`
         SELECT 
             rentals.*,
@@ -96,6 +96,27 @@ server.get(`/rentals`, async (req, res) => {
             return res.send(rentals.rows.filter(r => customerId ? r.customerId === parseInt(customerId) : r.gameId === parseInt(gameId)));
         }
         res.send(rentals.rows);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+server.get(`/rentals/metrics`, async (req, res) => {
+    try {
+        const metrics = await connection.query(`
+        SELECT 
+            SUM("originalPrice") AS revenue,
+            COUNT(id) AS rentals
+        FROM rentals
+        ;`);
+        const {revenue, rentals} = metrics.rows[0];
+        res.send(
+            {
+                revenue,
+                rentals,
+                avegare: revenue / rentals
+            }
+        );
     } catch {
         res.sendStatus(500);
     }
