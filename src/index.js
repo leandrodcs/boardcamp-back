@@ -196,8 +196,8 @@ server.post(`/rentals`, async (req, res) => {
             return res.sendStatus(400);
         }
         const gameBeingRented = games.rows[0];
-        const rentals = await connection.query(`SELECT * FROM rentals WHERE "gameId" = $1;`, [gameId]);
-        const isThereStockAvailable = gameBeingRented.stockTotal >= rentals.rows.length;
+        const rentals = await connection.query(`SELECT * FROM rentals WHERE "gameId" = $1 AND "returnDate" IS NULL;`, [gameId]);
+        const isThereStockAvailable = gameBeingRented.stockTotal > rentals.rows.length;
         if(!isThereStockAvailable) {
             return res.sendStatus(400);
         }
